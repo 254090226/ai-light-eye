@@ -235,3 +235,4 @@
 
 
 </body></html>
+<!-- 添加到 body 的最外层，确保 z-index 极高且不阻挡鼠标点击 --><br/><div id="screen-filter" style="<br/>    position: fixed; <br/>    top: 0; left: 0; width: 100vw; height: 100vh; <br/>    pointer-events: none; /* 关键：不阻挡用户操作 */<br/>    z-index: 9999; <br/>    transition: background-color 0.5s ease, opacity 0.5s ease;<br/>    mix-blend-mode: multiply; /* 混合模式，让颜色更自然 */<br/>"></div>
