@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>护眼调光 · 环境光自适应系统</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="ambient"></div>
+<div id="dimLayer" style="background-color: rgba(0, 0, 0, 0);"></div>
+<div id="warmLayer" style="background-color: rgba(255, 168, 88, 0);"></div>
+
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-title">护眼调光</div>
+        <div class="brand-sub">摄像头环境光感知 · 屏幕亮度与色温自适应</div>
+      </div>
+    </div>
+    <div class="top-right">
+      <div class="status-pill" id="statusPill">
+        <span class="status-dot"></span>
+        <span id="statusText">摄像头未开启</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <div class="col">
+      <!-- 摄像头 -->
+      <section class="card camera-card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">摄像头环境光采样</div>
+            <div class="card-sub">画面仅在本地处理，不会上传</div>
+          </div>
+          <span class="cam-info" id="camInfo">未连接</span>
+        </div>
+        <div class="video-wrap off" id="videoWrap">
+          <video id="video" playsinline="" muted="" autoplay=""></video>
+          <div class="roi"><span>取样区域</span></div>
+          <div class="video-placeholder">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
+              <circle cx="12" cy="13" r="3.4"></circle>
+            </svg>
+            <div id="camTitle">摄像头未开启</div>
+            <div class="hint" id="camHint">开启后仅在本地分析画面亮度，估算环境照度</div>
+          </div>
+        </div>
+        <div class="video-actions">
+          <button class="btn primary" id="startBtn">开启摄像头</button>
+          <button class="btn ghost" id="stopBtn" disabled="">停止</button>
+          <button class="btn link" id="demoBtn">没有摄像头？用模拟数据</button>
+        </div>
+        <p class="video-tip">建议把摄像头朝向桌面或白墙，避免镜头直对窗户或灯管，估算更接近工作面照度。</p>
+        <details class="settings">
+          <summary>采样与校准设置</summary>
+          <div class="settings-grid">
+            <div class="field">
+              <label for="calibInput">照度计实测值（lux）</label>
+              <div class="inline">
+                <input id="calibInput" type="number" min="1" step="10" placeholder="例如 400">
+                <button class="btn tiny" id="calibBtn">校准</button>
+              </div>
+              <div class="field-hint">用手机照度计 App 放在屏幕位置读数，可修正估算系数 <button id="calibReset" class="linklike">恢复默认</button></div>
+            </div>
+            <div class="field">
+              <label for="intervalSel">采样间隔</label>
+              <select id="intervalSel">
+                <option value="500">0.5 秒</option>
+                <option value="800" selected="">0.8 秒</option>
+                <option value="1500">1.5 秒</option>
+              </select>
+            </div>
+            <label class="check"><input type="checkbox" id="cropToggle" checked=""> 仅取画面中央区域</label>
+            <label class="check"><input type="checkbox" id="soundToggle" checked=""> 计时结束提示音</label>
+            <label class="check"><input type="checkbox" id="notifyToggle"> 桌面通知</label>
+            <div class="diag">
+              <span>画面平均亮度 Y <b id="meanY">--</b></span>
+              <span>过曝像素 <b id="clipRatio">--</b></span>
+              <span>估算系数 K <b id="kValue">2400</b></span>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <!-- 番茄钟 -->
+      <section class="card timer-card">
+        <div class="card-head">
+          <div class="card-title">番茄护眼计时</div>
+          <div class="seg small" id="presetSeg">
+            <button data-i="0" class="active">25 / 5</button>
+            <button data-i="1">45 / 10</button>
+            <button data-i="2">50 / 10</button>
+          </div>
+        </div>
+        <div class="ring-wrap">
+          <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="ring-bg" cx="60" cy="60" r="52"></circle>
+            <circle class="ring-prog" id="ringProg" cx="60" cy="60" r="52" style="stroke-dasharray: 326.726; stroke: rgb(61, 219, 201); stroke-dashoffset: 0;"></circle>
+          </svg>
+          <div class="timer-center">
+            <div class="timer-time" id="timerTime">25:00</div>
+            <div class="timer-phase" id="timerPhase">专注</div>
+          </div>
+        </div>
+        <div class="timer-actions">
+          <button class="btn primary wide" id="timerToggle">开始专注</button>
+          <button class="btn ghost" id="timerSkip">跳过</button>
+          <button class="btn ghost" id="timerReset">重置</button>
+        </div>
+        <div class="timer-meta">
+          <div class="dots" id="cycleDots"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+          <span id="pomoCount">已完成 0 个番茄</span>
+        </div>
+        <p class="timer-tip">休息时看向 6 米外至少 20 秒（20-20-20 法则），顺便确认环境照度是否仍处于 300–500 lux 的舒适区间。</p>
+      </section>
+    </div>
+
+    <div class="col">
+      <!-- 指标 -->
+      <section class="card metrics">
+        <div class="metric-head">
+          <div>
+            <div class="kicker">当前环境照度</div>
+            <div class="lux-line">
+              <span class="lux-num" id="luxNum">--</span>
+              <span class="lux-unit">lux</span>
+              <span class="badge neutral" id="luxBadge">等待数据</span>
+            </div>
+          </div>
+          <div class="quick-toggles">
+            <label class="switch"><input type="checkbox" id="autoToggle" checked=""><span class="track"></span>自动调光</label>
+            <label class="switch"><input type="checkbox" id="filterToggle" checked=""><span class="track"></span>全屏滤镜</label>
+          </div>
+        </div>
+
+        <div class="scale">
+          <div class="scale-track" id="scaleTrack"><div class="scale-seg" style="flex: 0 0 30.1%; background: rgba(255, 98, 115, 0.5);"></div><div class="scale-seg" style="flex: 0 0 28.7%; background: rgba(255, 143, 94, 0.45);"></div><div class="scale-seg" style="flex: 0 0 11.09%; background: rgba(91, 214, 138, 0.55);"></div><div class="scale-seg" style="flex: 0 0 15.05%; background: rgba(61, 219, 201, 0.4);"></div><div class="scale-seg" style="flex: 0 0 15.05%; background: rgba(255, 203, 92, 0.45);"></div></div>
+          <div class="scale-marker" id="scaleMarker" style="left:50%"></div>
+          <div class="scale-labels" id="scaleLabels"><span class="edge-l" style="left: 0%;">20</span><span style="left: 58.8046%;">300</span><span style="left: 69.897%;">500</span><span style="left: 84.9485%;">1000</span><span class="edge-r" style="left: 100%;">2000+</span></div>
+        </div>
+
+        <div class="advice" id="advice">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 18h6M10 21h4"></path>
+            <path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V17h5.2v-1.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"></path>
+          </svg>
+          <p id="adviceText">开启摄像头后，系统会估算环境照度，并给出灯光与屏幕设置建议。</p>
+        </div>
+
+        <div class="reco">
+          <div class="reco-item">
+            <div class="reco-label">建议屏幕亮度</div>
+            <div class="reco-value"><span id="recBri">--</span><span class="unit">%</span></div>
+          </div>
+          <div class="reco-item">
+            <div class="reco-label">建议色温</div>
+            <div class="reco-value"><span id="recTemp">----</span><span class="unit">K</span></div>
+          </div>
+        </div>
+
+        <div class="manual">
+          <div class="manual-item">
+            <div class="manual-head"><span>屏幕亮度</span><b id="briSliderVal">65%</b></div>
+            <input type="range" id="briSlider" min="20" max="100" step="1" value="65" aria-label="手动亮度" disabled="">
+          </div>
+          <div class="manual-item">
+            <div class="manual-head"><span>屏幕色温</span><b id="tempSliderVal">4800K</b></div>
+            <input type="range" id="tempSlider" min="2700" max="6500" step="50" value="4800" aria-label="手动色温" disabled="">
+          </div>
+        </div>
+      </section>
+
+      <!-- 曲线 -->
+      <section class="card chart-card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">照度变化曲线</div>
+            <div class="card-sub">绿色区间为 300–500 lux 读写舒适带</div>
+          </div>
+          <div class="seg" id="windowSeg">
+            <button data-sec="60">1 分钟</button>
+            <button data-sec="180" class="active">3 分钟</button>
+            <button data-sec="300">5 分钟</button>
+            <button data-sec="600">10 分钟</button>
+          </div>
+        </div>
+        <div class="chart-wrap" id="chartWrap">
+          <canvas id="chart" width="584" height="298"></canvas>
+          <div class="chart-tip" id="chartTip" style="opacity: 0;"></div>
+        </div>
+      </section>
+
+      <!-- 统计 -->
+      <section class="card stats">
+        <div class="stat">
+          <div class="stat-label">平均照度</div>
+          <div class="stat-value"><span id="avgLux">--</span><i>lux</i></div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">舒适区间占比</div>
+          <div class="stat-value"><span id="comfortPct">--</span></div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">记录时长</div>
+          <div class="stat-value"><span id="duration">--</span></div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">采样次数</div>
+          <div class="stat-value"><span id="sampleCount">--</span></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="foot">
+    <span>照度估算基于摄像头画面亮度，受自动曝光与取景内容影响，精度有限；精确测量请使用照度计。</span>
+    <span>网页无法直接修改系统亮度与色温，本页通过全屏滤镜呈现等效观感，并给出可手动设置的参考值。</span>
+  </footer>
+</div>
+
+<div id="toast" role="status" aria-live="polite" class="">提示：将摄像头朝向桌面或白墙，估算更接近工作面照度。</div>
+
+<script src="app.js"></script>
+
+
+</body></html>
